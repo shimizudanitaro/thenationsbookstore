@@ -80,8 +80,19 @@
     .book-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: box-shadow .2s, transform .2s; display: flex; flex-direction: column; }
     .book-card:hover { box-shadow: 0 8px 28px var(--shadow); transform: translateY(-3px); }
     .book-cover { height: 200px; background: var(--bg); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
-    .book-cover img { width: 100%; height: 100%; object-fit: cover; transition: transform .35s ease; }
-    .book-card:hover .book-cover img { transform: scale(1.06); }
+    .book-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* Start at 1.2x zoom so there is 'room' to zoom out */
+    transform: scale(1.0); 
+    transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* 3. Hover state: Image zooms OUT to 1.0 (full view) */
+.book-card:hover .book-cover img {
+    transform: scale(0.5);
+}
     .cover-placeholder { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .4rem; font-family: var(--font-display); font-size: .75rem; font-weight: 600; text-align: center; padding: .75rem; color: #fff; }
     .cover-placeholder .cover-icon { font-size: 2rem; opacity: .6; }
 
@@ -202,6 +213,7 @@
       'originalPrice' => (float)$row['original_price'],
       'coverColor'    => $row['cover_color'],
       'coverEmoji'    => $row['cover_emoji'],
+      'cover'         => $row['image'], // MUST match the database column name exactly
       'isNew'         => (bool)$row['is_new'],
     ];
   }
@@ -257,7 +269,7 @@
     <div class="cart-subtotal"><span>Subtotal</span><span id="cart-subtotal">PHP 0.00</span></div>
     <div class="cart-subtotal"><span>Shipping</span><span>Free</span></div>
     <div class="cart-subtotal total"><span>Total</span><span id="cart-total">PHP 0.00</span></div>
-    <button class="btn-checkout">Proceed to Checkout</button>
+    <button class="btn-checkout" onclick="window.location.href='checkout.php'">Proceed to Checkout</button>
   </div>
 </div>
 
@@ -298,7 +310,11 @@
 
 <script>
 const allBooks = <?php echo json_encode($saleBooks); ?>;
-let cart = [];
+// This checks if there is already a cart saved in the browser
+let cart = JSON.parse(localStorage.getItem('bookstore_cart')) || [];
+
+// Call updateCartUI once on page load to show existing items
+window.addEventListener('DOMContentLoaded', updateCartUI);
 
 function pct(b) {
   return Math.round((b.originalPrice - b.price) / b.originalPrice * 100);
@@ -402,6 +418,7 @@ function changeQty(id, delta) {
 function updateCartUI() {
   const total = cart.reduce((s, c) => s + c.book.price * c.qty, 0);
   const count = cart.reduce((s, c) => s + c.qty, 0);
+  localStorage.setItem('bookstore_cart', JSON.stringify(cart));
   const badge = document.getElementById('cart-badge');
   badge.textContent = count;
   badge.style.display = count > 0 ? 'flex' : 'none';
